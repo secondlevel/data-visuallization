@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v6.js"></script>
+<head>
+    <link href="https://raw.githack.com/secondlevel/data-visuallization/main/Lab2/styles.css" rel="stylesheet" />
+</head>
+<style>
+    h5{
+        display: inline-block;
+    }
+    p{
+        display: inline-block;
+    }
+    select{
+        height: 3.5vh;
+        width: 16vh;
+        font-size:16px;
+    }
+    .axis-label {
+      fill: black;
+      font-size: 13pt;
+      font-family: sans-serif;
+      font-weight:bold;
+    }
+    .center{
+        text-align: center;
+    }
+    .select_position{
+        position: relative;
+        top: 73%;
+        left: 33%;
+    }
+    .myvis_position{
+        position: relative;
+        top: 80%;
+        left: 30%;
+    }
+    .button_text{
+        width: 5%; 
+        height: 60%;
+        font-size: 13pt;
+        font-weight:bold;
+    }
+</style>
+
+<div id="select_option" class="select_position">
+    <br>
+    <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+    <h5 class="axis-label">First Select:</h5>
+    <select class="option" id="first">
+        <option value="sepal length">sepal length</option>
+        <option value="sepal width">sepal width</option>
+        <option value="petal length">petal length</option>
+        <option value="petal width">petal width</option>
+    </select>
+    <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+    <h5 class="axis-label">Second Select:</h5>
+    <select class="option" id="second">
+    <option value="sepal length">sepal length</option>
+    <option value="sepal width">sepal width</option>
+    <option value="petal length">petal length</option>
+    <option value="petal width">petal width</option>    
+    </select>
+    <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+    <input id="button" class="btn btn-primary px-4 me-sm-3" type="button" value="change" />
+</div>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz" class="center"></div>
+
+<script>
+
+    // set the dimensions and margins of the graph
+    const margin = {top: 10, right: 150, bottom: 70, left: 50},
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+    
+    // append the svg object to the body of the page
+    const svg = d3.select("#my_dataviz")
+                  .append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                  .append("g")
+                    .attr("transform",
+                            `translate(${margin.left},${margin.top})`);
+    const colorLegendG = svg.append('g')
+        .attr('transform', `translate(${width + 60}, 150)`);
+
+    // Parse the Data
+    d3.csv("http://vis.lab.djosix.com:2020/data/iris.csv").then(function(data) {
+
+        var first_index=0, second_index=0;
+
+        const color_table = ["Iris-setosa", "Iris-versicolor", "Iris-virginica"]
+
+        d3.select("#select_option")
+          .attr("class", "select_position")
+
+        d3.select("#my_dataviz")
+          .attr("class", "myvis_position")          
+
+        const iris=[]
+        for(var i = 0; i<data.length-1; i++)
+        {
+            iris.push(data[i])
+        }
+        // Color scale: give me a specie name, I return a color
+        const color = d3.scaleOrdinal()
+                        .domain(["Iris-setosa", "Iris-versicolor", "Iris-virginica" ])
+                        .range([ "#440154ff", "#21908dff", "#fde725ff"])
+
+        // Here I set the list of dimension manually to control the order of axis:
+        dimensions = ["petal length", "petal width", "sepal length", "sepal width"]
+
+        // For each dimension, I build a linear scale. I store all in a y object
+        const y = {}
+        for (var i in dimensions) {
+            name = dimensions[i]
+            y[name] = d3.scaleLinear()
+                        .domain([0, 8]) 
+                        .range([height, 0])
+        }
+    
+        var x = d3.scalePoint()
+              .range([0, width])
+              .domain(dimensions);
+    
+        function path(d) {
+            return d3.line()(dimensions.map(function(p) {return [x(p), y[p](d[p])];}));
+        }
+
+        // Draw the lines
+        svg.selectAll("myPath")
+            .data(iris)
+            .join("path")
+                .attr("class", function (d) {return "line " + d.class}) 
+                .attr("d",  path)
+                .attr("id", "path_line")
+                .style("fill", "none" )
+                .style("stroke", function(d){return(color(d.class))})
+                .style("opacity", 0.5)
+    
+        // Draw the axis:
+        svg.selectAll("myAxis")
+            .data(dimensions).enter()
+            .append("g")
+            .attr("class", "axis")
+            .attr("id", "axis_change")
+            .attr("transform", function(d) { return `translate(${x(d)})`})
+            .each(function(d) {d3.select(this).call(d3.axisLeft().ticks(5).scale(y[d]));})
+            .append("text")
+                .attr("class", "axis-label")
+                .attr("id", "text_change")
+                .style("text-anchor", "middle")
+                .attr("y", height+27)
+                .text(function(d) { return d; })
+                .style("fill", "black")
+
+        // legend line 
+        var linewidth=20, size=20, lineheight=5; 
+        colorLegendG.selectAll("mydots")
+                    .data(["setosa", "versicolor", "virginica" ])
+                    .enter()
+                    .append("rect")
+                    .attr("x", -25)
+                    .attr("y", function(d,i){ return -123 + i*(size+5)}) // 100 is where the first dot appears. 25 is the distance between dots
+                    .attr("width", linewidth)
+                    .attr("height", lineheight)
+                    .style("fill", function(d){ return color(d)})
+        // legend text
+        colorLegendG.selectAll("mylabels")
+                    .data(["setosa", "versicolor", "virginica" ])
+                    .enter()
+                    .append("text")
+                    .attr("x", 5)
+                    .attr("y", function(d,i){return -120 + i*25}) // 100 is where the first dot appears. 25 is the distance between dots
+                    .style("fill", function(d){return color(d)})
+                    .text(function(d){ return d})
+                    .attr("text-anchor", "left")
+                    .style("font-size","20px")
+                    .style("alignment-baseline", "middle")                
+
+        d3.select("#button").on("click", function() {
+
+            var first=d3.select("#first").property("value")
+            var second=d3.select("#second").property("value") 
+
+            for(var i in dimensions) {
+                name=dimensions[i]
+                if(name===first) first_index=i;
+                if(name===second) second_index=i;
+            }
+            var tmp=dimensions[first_index];
+            dimensions[first_index]=dimensions[second_index];
+            dimensions[second_index]=tmp;
+            for (var i in dimensions) {
+                name = dimensions[i]
+                y[name] = d3.scaleLinear()
+                            .domain([0, 8]) 
+                            .range([height, 0])
+            }
+
+            x.domain(dimensions);
+
+            function path(d) {
+                return d3.line()(dimensions.map(function(p) {return [x(p), y[p](d[p])];}));
+            }            
+
+            // Draw the lines
+            svg.selectAll("#path_line")
+                .data(iris)
+                    .transition()
+                    .duration(500)
+                    .attr("class", function (d) {return "line " + d.class}) 
+                    .attr("d",  path)
+                    .style("fill", "none" )
+                    .style("stroke", function(d){return(color(d.class))})
+                    .style("opacity", 0.5)
+
+            // Draw the axis:
+            svg.selectAll("#axis_change")
+                .data(dimensions)
+                .transition()
+                .duration(500)
+                .attr("class", "axis")
+                .attr("transform", function(d) { return `translate(${x(d)})`})
+                .each(function(d) {d3.select(this).call(d3.axisLeft().ticks(5).scale(y[d]));})
+            
+            svg.selectAll("#text_change")
+                .data(dimensions)
+                    .transition()
+                    .duration(500)
+                    .text(function(d) { return d; })
+                    .style("fill", "black")                    
+        })                
+    })
+    </script>
