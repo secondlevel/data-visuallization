@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+  h5{
+    display: inline-block;
+  }
+  p{
+    display: inline-block;
+  }
+  select{
+    display: inline-block;
+  }
+  .axis-label {
+    fill: black;
+    font-size: 15pt;
+    font-family: sans-serif;
+  }
+  .XYfont{
+    fill: black;
+    font-size: 10pt;
+    font-family: "TimesNewRoman";
+    font-weight:bold;
+  }
+  .legend-label {
+    fill: #635F5D;
+    font-size: 50pt;
+    font-family: sans-serif;
+  }
+  .tick line{
+    opacity: 0.2;
+  }  
+</style>
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v6.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<br>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+<h5>X:</h5>
+<select class="option" id="x_axis">
+  <option value="sepal length">sepal length</option>
+  <option value="sepal width">sepal width</option>
+  <option value="petal length">petal length</option>
+  <option value="petal width">petal width</option>
+</select>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</p>
+<h5>Y:</h5>
+<select class="option" id="y_axis">
+  <option value="sepal length">sepal length</option>
+  <option value="sepal width">sepal width</option>
+  <option value="petal length">petal length</option>
+  <option value="petal width">petal width</option>    
+</select>
+
+<div id="my_dataviz"></div>
+
+<script>
+
+  // set the dimensions and margins of the graph
+  const margin = {top: 20, right: 150, bottom: 50, left: 60},
+                  width = 600 - margin.left - margin.right,
+                  height = 400 - margin.top - margin.bottom;
+  
+  // append the svg object to the body of the page
+  const svg = d3.select("#my_dataviz")
+              .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+                .attr("transform",
+                      `translate(${margin.left}, ${margin.top})`);
+  
+  const tooltip = d3.select("#my_dataviz")
+                    .append("div")
+                    .style("opacity", 0)
+                    .attr("class", "tooltip")
+                    .style("background-color", "white")
+                    .style("border", "solid")
+                    .style("border-width", "1px")
+                    .style("border-radius", "5px")
+                    .style("padding", "10px")
+
+  const iris = []
+  const sepal_length = []
+  const sepal_width = []
+  const petal_length = []
+  const petal_width = []
+  //Read the data
+  d3.csv("http://vis.lab.djosix.com:2020/data/iris.csv").then(function(data)
+  {
+
+    for(var i = 0; i<data.length-1; i++)
+    {
+      iris.push(data[i])
+    }
+
+    const color_table = ["Iris-setosa", "Iris-versicolor", "Iris-virginica"]
+
+    // Color scale: give me a specie name, I return a color
+    const color = d3.scaleOrdinal()
+                    .domain(color_table)
+                    .range([ "#FF8888", "#5599FF", "#66DD00"])
+
+    var x = d3.scaleLinear()
+      .domain([0, 9])
+      .range([0, width]);             
+
+    var xAxis = svg.append("g")
+        .attr("id", "xaxis")
+        .attr("class", "line")
+        .attr("transform", `translate(0, ${height})`)
+        .call(d3.axisBottom(x).tickSize(-height));
+
+    var y = d3.scaleLinear()
+          .domain([0, 9])
+          .range([height, 0]);          
+    
+    var yAxis = svg.append("g")
+      .attr("id", "yaxis")
+      .attr("class", "line")
+      .call(d3.axisLeft(y).tickSize(-width));
+
+    // x axis label
+    var xlabel = svg.append("text")
+        .attr("text-anchor", "end")
+        .attr("x", width - width*0.35)
+        .attr("y", height + margin.top + 20)
+        .attr("class", "axis-label")
+        .text(d3.select("#x_axis").property("value"));   
+
+    // y axis label
+    var ylabel = svg.append("text")
+        .attr("text-anchor", "end")
+        .attr("transform", "rotate(-90)")
+        .attr("y", -margin.left+20)
+        .attr("x", -margin.top-height*0.25)
+        .attr("class", "axis-label")
+        .text(d3.select("#y_axis").property("value"))    
+
+    // // Highlight the specie that is hovered
+    // const highlight = function(event,d){
+
+    //     selected_specie = d.class
+
+    //     d3.selectAll(".dot")
+    //       .transition()
+    //       .duration(200)
+    //       .style("fill", "lightgrey")
+    //       .attr("r", 3)
+
+    //     d3.selectAll("." + selected_specie)
+    //       .transition()
+    //       .duration(200)
+    //       .style("fill", color(selected_specie))
+    //       .attr("r", 7)
+    // }
+
+    // // Highlight the specie that is hovered
+    // const doNotHighlight = function(event,d){
+    //     d3.selectAll(".dot")
+    //       .transition()
+    //       .duration(200)
+    //       .style("fill", d => color(d.class))
+    //       .attr("r", 5 )
+    // }        
+
+    // legend circle    
+    svg.selectAll("mydots")
+        .data(color_table)
+        .enter()
+        .append("circle")
+        .attr("cx", width+25)
+        .attr("cy", function(d,i){return 160+i*25}) // 100 is where the first dot appears. 25 is the distance between dots
+        .attr("r", 6)
+        .style("fill", function(d){ return color(d)})
+
+    // legend text
+    svg.selectAll("mylabels")
+      .data(color_table)
+      .enter()
+      .append("text")
+      .attr("x", width+40)
+      .attr("y", function(d,i){return 160+i*25+1}) // 100 is where the first dot appears. 25 is the distance between dots
+      .style("fill", function(d){ return color(d)})
+      .text(function(d){ return d})
+      .attr("text-anchor", "left")
+      .style("alignment-baseline", "middle")
+
+    svg.append('g')
+      .selectAll("dot")
+      .data(iris)
+      .join("circle")
+      // .attr("class", function (d) { return "dot " + d.class } )
+      .attr("id", "data_point")
+      .attr("cx", function(d) {return x(d[d3.select("#x_axis").property("value")]);})
+      .attr("cy", function(d) {return y(d[d3.select("#y_axis").property("value")]);})
+      .attr("r", 5)
+      .attr('fill-opacity', 0.8)
+      .style("fill", function(d) {return color(d.class)}) 
+      // .on("mouseover", highlight)
+      // .on("mouseleave", doNotHighlight)
+
+    d3.selectAll(".option").on("change", function() 
+    {
+      var x_val=d3.select("#x_axis").property("value")
+      var y_val=d3.select("#y_axis").property("value") 
+      
+      var Xmin=9, Xmax=0, Ymin=9, Ymax=0;
+      for(var i = 0; i<iris.length-1; i++)
+      {
+         if(Xmin>iris[i][x_val]) Xmin=iris[i][x_val]
+         if(Xmax<iris[i][x_val]) Xmax=iris[i][x_val]
+         if(Ymin>iris[i][y_val]) Ymin=iris[i][y_val]
+         if(Ymax<iris[i][y_val]) Ymax=iris[i][y_val]
+      }
+
+      x.domain([Math.floor(Xmin), Math.ceil(Xmax)]);             
+      y.domain([Math.floor(Ymin), Math.ceil(Ymax)]);     
+            
+      xlabel.text(x_val).transition().duration(1000);
+      ylabel.text(y_val).transition().duration(1000);  
+
+      svg.selectAll("#data_point")
+          .data(iris)
+          .transition()
+          .duration(500)
+          // .attr("class", function (d) { return "dot " + d.class } )
+          .attr("cx", function(d) {return x(d[x_val]);})
+          .attr("cy", function(d) {return y(d[y_val]);})
+          .attr("r", 5)
+          .attr('fill-opacity', 0.8)
+          .style("fill", function(d) {return color(d.class)})
+          // .on("mouseover", highlight)
+          // .on("mouseleave", doNotHighlight)
+
+      // Update X Axis
+      xAxis.call(d3.axisBottom(x).tickSize(-height))
+          .transition()
+          .duration(1000);
+
+      // Update Y Axis
+      yAxis.call(d3.axisLeft(y).tickSize(-width))
+          .transition()
+          .duration(100);
+    });
+  })
+  </script>
